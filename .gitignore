@@ -1,0 +1,17 @@
+# Database data files
+Database/data/
+
+# Common files to ignore
+*.log
+*.tmp
+*.cache
+.DS_Store
+.env
+.env.local
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
