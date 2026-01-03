@@ -1,13 +1,25 @@
+# Python
 __pycache__/
 *.pyc
-*.pyo
 venv/
 env/
-node_modules/
-dist/
-build/
 .env
+.env.local
+
+# Node
+node_modules/
+npm-debug.log
+.env.local
+
+# Database
 *.db
 *.sqlite
-data/
-.DS_Store
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
