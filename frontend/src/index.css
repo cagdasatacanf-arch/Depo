@@ -1,68 +1,302 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* DEPO Financial Dashboard Design System */
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
+@layer base {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    --background: 40 20% 99%;
+    --foreground: 192 56% 14%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 192 56% 14%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 192 56% 14%;
+
+    --primary: 180 60% 31%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 40 20% 96%;
+    --secondary-foreground: 192 56% 14%;
+
+    --muted: 40 15% 94%;
+    --muted-foreground: 180 8% 45%;
+
+    --accent: 180 60% 31%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 350 75% 42%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 180 60% 31%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 18 55% 42%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 35 15% 85%;
+    --input: 35 15% 85%;
+    --ring: 180 60% 31%;
+
+    --radius: 0.5rem;
+
+    /* Chart colors */
+    --chart-up: 152 56% 42%;
+    --chart-down: 350 75% 50%;
+    --chart-line: 180 60% 31%;
+    --chart-volume: 180 60% 75%;
+    --chart-ma20: 217 91% 60%;
+    --chart-ma50: 280 70% 60%;
+    --chart-ma200: 45 90% 55%;
+    --chart-rsi: 271 81% 56%;
+    --chart-bb: 180 60% 50%;
+    --chart-macd: 217 91% 60%;
+    --chart-macd-signal: 350 65% 55%;
+    --chart-macd-histogram: 152 56% 42%;
+    
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 192 56% 14%;
+    --sidebar-primary: 180 60% 31%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 40 20% 96%;
+    --sidebar-accent-foreground: 192 56% 14%;
+    --sidebar-border: 35 15% 90%;
+    --sidebar-ring: 180 60% 31%;
+
+    /* AI Panel */
+    --ai-bg: 180 40% 97%;
+    --ai-border: 180 30% 85%;
   }
-  a:hover {
-    color: #747bff;
+
+  .dark {
+    --background: 180 12% 8%;
+    --foreground: 40 20% 96%;
+
+    --card: 180 12% 11%;
+    --card-foreground: 40 20% 96%;
+
+    --popover: 180 12% 11%;
+    --popover-foreground: 40 20% 96%;
+
+    --primary: 180 60% 45%;
+    --primary-foreground: 180 12% 8%;
+
+    --secondary: 180 12% 15%;
+    --secondary-foreground: 40 20% 96%;
+
+    --muted: 180 12% 18%;
+    --muted-foreground: 180 8% 60%;
+
+    --accent: 180 60% 45%;
+    --accent-foreground: 180 12% 8%;
+
+    --destructive: 350 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 56% 50%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 18 65% 55%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 180 12% 20%;
+    --input: 180 12% 20%;
+    --ring: 180 60% 45%;
+
+    /* Chart colors - dark mode */
+    --chart-up: 152 56% 50%;
+    --chart-down: 350 65% 55%;
+    --chart-line: 180 60% 50%;
+    --chart-volume: 180 40% 35%;
+    --chart-ma20: 217 91% 65%;
+    --chart-ma50: 280 70% 65%;
+    --chart-ma200: 45 90% 60%;
+    --chart-rsi: 271 81% 60%;
+    --chart-bb: 180 60% 55%;
+    --chart-macd: 217 91% 65%;
+    --chart-macd-signal: 350 65% 60%;
+    --chart-macd-histogram: 152 56% 50%;
+    
+    /* Sidebar - dark mode */
+    --sidebar-background: 180 12% 6%;
+    --sidebar-foreground: 40 20% 96%;
+    --sidebar-primary: 180 60% 45%;
+    --sidebar-primary-foreground: 180 12% 8%;
+    --sidebar-accent: 180 12% 15%;
+    --sidebar-accent-foreground: 40 20% 96%;
+    --sidebar-border: 180 12% 18%;
+    --sidebar-ring: 180 60% 45%;
+
+    /* AI Panel - dark mode */
+    --ai-bg: 180 20% 12%;
+    --ai-border: 180 20% 22%;
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  code, pre {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer utilities {
+  .chart-container {
+    @apply relative rounded-lg bg-card border border-border;
+  }
+
+  .stat-card {
+    @apply bg-card border border-border rounded-lg p-4 transition-all duration-200;
+  }
+
+  .stat-card:hover {
+    @apply border-primary/30 shadow-sm;
+  }
+
+  .symbol-chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium 
+           bg-secondary text-secondary-foreground cursor-pointer transition-all duration-200;
+  }
+
+  .symbol-chip:hover {
+    @apply bg-primary/10 text-primary;
+  }
+
+  .symbol-chip.active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .time-btn {
+    @apply px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-150
+           text-muted-foreground hover:text-foreground hover:bg-muted;
+  }
+
+  .time-btn.active {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  .indicator-toggle {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm
+           border border-border bg-background cursor-pointer transition-all duration-150;
+  }
+
+  .indicator-toggle:hover {
+    @apply border-primary/50;
+  }
+
+  .indicator-toggle.active {
+    @apply bg-primary/10 border-primary text-primary;
+  }
+
+  .ai-result-card {
+    @apply bg-card border border-border rounded-lg p-4 animate-fade-in;
+  }
+
+  .price-up {
+    @apply text-[hsl(var(--chart-up))];
+  }
+
+  .price-down {
+    @apply text-[hsl(var(--chart-down))];
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(180 80% 50%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-subtle {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out forwards;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.3s ease-out forwards;
+  }
+
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .prose-answer {
+    @apply leading-relaxed;
+  }
+
+  .prose-answer p {
+    @apply mb-4;
+  }
+
+  .prose-answer ul, .prose-answer ol {
+    @apply mb-4 pl-6;
+  }
+
+  .prose-answer li {
+    @apply mb-2;
+  }
+
+  .prose-answer strong {
+    @apply font-semibold;
+  }
+
+  /* Scrollbar styling */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/30;
   }
 }

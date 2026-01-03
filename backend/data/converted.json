@@ -1,0 +1,39 @@
+{
+  "metadata": {
+    "source": "sample.csv",
+    "total_rows": 9,
+    "columns": [
+      "$csv_content = @\""
+    ],
+    "conversion_time": "2026-01-03T03:51:07.170Z"
+  },
+  "data": [
+    {
+      "$csv_content = @\"": "id"
+    },
+    {
+      "$csv_content = @\"": "1"
+    },
+    {
+      "$csv_content = @\"": "2"
+    },
+    {
+      "$csv_content = @\"": "3"
+    },
+    {
+      "$csv_content = @\"": "4"
+    },
+    {
+      "$csv_content = @\"": "5"
+    },
+    {
+      "$csv_content = @\"": "\"@"
+    },
+    {
+      "$csv_content = @\"": ""
+    },
+    {
+      "$csv_content = @\"": "Set-Content -Path \"data/sample.csv\" -Value $csv_content"
+    }
+  ]
+}

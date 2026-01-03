@@ -1,0 +1,107 @@
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const cors = require('cors');
+
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+console.log('🚀 DEPO Backend Initializing...');
+
+// ✅ HEALTH CHECK
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'DEPO Backend Running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// ✅ SERVE CONVERTED DATA
+app.get('/api/data', (req, res) => {
+  try {
+    const dataPath = path.join(__dirname, 'data', 'converted.json');
+    
+    if (!fs.existsSync(dataPath)) {
+      return res.status(404).json({
+        error: 'Data file not found',
+        path: dataPath
+      });
+    }
+    
+    const rawData = fs.readFileSync(dataPath, 'utf-8');
+    const data = JSON.parse(rawData);
+    
+    console.log(`✅ Serving ${data.data?.length || 0} records from /api/data`);
+    res.json(data);
+  } catch (error) {
+    console.error('❌ Error reading data:', error.message);
+    res.status(500).json({
+      error: 'Failed to load data',
+      message: error.message
+    });
+  }
+});
+
+// ✅ GET STOCK SYMBOLS (for dropdown)
+app.get('/api/stocks', (req, res) => {
+  try {
+    const dataPath = path.join(__dirname, 'data', 'converted.json');
+    const rawData = fs.readFileSync(dataPath, 'utf-8');
+    const jsonData = JSON.parse(rawData);
+    
+    // Extract symbol from data
+    const stocks = jsonData.data.map(item => {
+      return item.symbol || item.name || item.id;
+    });
+    
+    console.log(`✅ Serving ${stocks.length} stock symbols`);
+    res.json({ stocks });
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ✅ GET SPECIFIC STOCK DATA
+app.get('/api/stock/:symbol', (req, res) => {
+  try {
+    const dataPath = path.join(__dirname, 'data', 'converted.json');
+    const rawData = fs.readFileSync(dataPath, 'utf-8');
+    const jsonData = JSON.parse(rawData);
+    
+    const symbol = req.params.symbol.toUpperCase();
+    const stock = jsonData.data.find(item => 
+      (item.symbol || item.name || item.id).toUpperCase() === symbol
+    );
+    
+    if (!stock) {
+      return res.status(404).json({ error: `Stock ${symbol} not found` });
+    }
+    
+    res.json(stock);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ✅ ERROR HANDLING
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({ error: err.message });
+});
+
+// ✅ START SERVER
+const PORT = 3001;
+app.listen(PORT, () => {
+  console.log('✅ ================================');
+  console.log('✅ Server running on http://localhost:3001');
+  console.log('✅ Health: http://localhost:3001/api/health');
+  console.log('✅ Data: http://localhost:3001/api/data');
+  console.log('✅ Stocks: http://localhost:3001/api/stocks');
+  console.log('✅ ================================');
+});

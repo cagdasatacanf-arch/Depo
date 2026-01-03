@@ -26,7 +26,7 @@ def init_db():
     
     conn.commit()
     conn.close()
-    print("✅ Database initialized")
+    print("[OK] Database initialized")
 
 def get_all_stocks():
     """Get all unique tickers in database"""
@@ -72,17 +72,17 @@ def insert_stock_data(ticker: str, df):
     for date, row in df.iterrows():
         try:
             cursor.execute('''
-                INSERT INTO stock_prices 
+                INSERT INTO stock_prices
                 (ticker, date, open, high, low, close, volume)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (
                 ticker,
                 str(date.date()),
-                float(row['Open']),
-                float(row['High']),
-                float(row['Low']),
-                float(row['Close']),
-                int(row['Volume'])
+                float(row['Open'].iloc[0]) if hasattr(row['Open'], 'iloc') else float(row['Open']),
+                float(row['High'].iloc[0]) if hasattr(row['High'], 'iloc') else float(row['High']),
+                float(row['Low'].iloc[0]) if hasattr(row['Low'], 'iloc') else float(row['Low']),
+                float(row['Close'].iloc[0]) if hasattr(row['Close'], 'iloc') else float(row['Close']),
+                int(row['Volume'].iloc[0]) if hasattr(row['Volume'], 'iloc') else int(row['Volume'])
             ))
         except sqlite3.IntegrityError:
             # Skip duplicates
@@ -90,4 +90,4 @@ def insert_stock_data(ticker: str, df):
     
     conn.commit()
     conn.close()
-    print(f"✅ Inserted {len(df)} records for {ticker}")
+    print(f"[OK] Inserted {len(df)} records for {ticker}")

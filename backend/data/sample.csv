@@ -1,0 +1,10 @@
+$csv_content = @"
+id,name,value,date,category
+1,Product_A,150.50,2026-01-01,Electronics
+2,Product_B,200.75,2026-01-02,Electronics
+3,Product_C,99.99,2026-01-03,Fashion
+4,Product_D,350.00,2026-01-04,Home
+5,Product_E,45.25,2026-01-05,Fashion
+"@
+
+Set-Content -Path "data/sample.csv" -Value $csv_content

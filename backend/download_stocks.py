@@ -12,15 +12,15 @@ STOCKS = ["GOOGL", "MSFT", "AAPL", "TSLA", "AMZN"]
 end_date = datetime.now()
 start_date = end_date - timedelta(days=365*5)
 
-print(f"📊 Downloading stock data from {start_date.date()} to {end_date.date()}")
+print(f"[DOWNLOAD] Downloading stock data from {start_date.date()} to {end_date.date()}")
 
 for ticker in STOCKS:
-    print(f"\n⏳ Downloading {ticker}...")
+    print(f"\n[DOWNLOAD] Downloading {ticker}...")
     try:
         df = yf.download(ticker, start=start_date, end=end_date, progress=False)
         insert_stock_data(ticker, df)
-        print(f"✅ {ticker} completed")
+        print(f"[OK] {ticker} completed")
     except Exception as e:
-        print(f"❌ Error downloading {ticker}: {e}")
+        print(f"[ERROR] Error downloading {ticker}: {e}")
 
-print("\n🎉 All stocks downloaded!")
+print("\n[OK] All stocks downloaded!")
