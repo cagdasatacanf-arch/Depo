@@ -1,6 +1,6 @@
 import { StockData } from '@/lib/api';
-import { useMemo, useState } from 'react';
-import { ComposedChart, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Customized, Brush, Line, Area, ReferenceLine } from 'recharts';
+import { useMemo } from 'react';
+import { ComposedChart, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Bar, Line, Area, ReferenceLine, Cell, Brush } from 'recharts';
 
 interface CandlestickChartProps {
   data: StockData[];
@@ -24,20 +24,22 @@ interface FibonacciLevel {
 }
 
 export function CandlestickChart({ data, height = 400, indicators = {} }: CandlestickChartProps) {
-  // Keep data in original order (already reversed in parent component)
+  // Transform data for rendering
   const chartData = useMemo(() => {
-    return data.map((item, index) => {
+    return data.map((item) => {
       const isGreen = item.close >= item.open;
       return {
         ...item,
-        index,
         isGreen,
-        color: isGreen ? '#10b981' : '#ef4444',
+        // For bar chart representation
+        highLow: [item.low, item.high],
+        openClose: [Math.min(item.open, item.close), Math.max(item.open, item.close)],
+        bodyColor: isGreen ? '#10b981' : '#ef4444',
       };
     });
   }, [data]);
 
-  // Calculate Fibonacci levels based on full data
+  // Calculate Fibonacci levels
   const fibonacciLevels = useMemo((): FibonacciLevel[] => {
     if (!indicators.fibonacci || chartData.length === 0) return [];
 
@@ -59,7 +61,7 @@ export function CandlestickChart({ data, height = 400, indicators = {} }: Candle
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      const isGreen = data.close > data.open;
+      const isGreen = data.close >= data.open;
 
       return (
         <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
@@ -87,108 +89,6 @@ export function CandlestickChart({ data, height = 400, indicators = {} }: Candle
     return null;
   };
 
-  // Custom candlestick renderer using Customized component
-  const CandlestickLayer = (props: any) => {
-    const { xAxisMap, yAxisMap, width, height, margin } = props;
-
-    if (!xAxisMap || !yAxisMap) {
-      console.log('Missing axis maps');
-      return null;
-    }
-
-    const xAxis = xAxisMap[0];
-    const yAxis = yAxisMap[0];
-
-    if (!xAxis || !yAxis) {
-      console.log('Missing axes');
-      return null;
-    }
-
-    // Calculate the actual chart area width
-    const chartWidth = width - (margin?.left || 0) - (margin?.right || 0);
-    const barWidth = chartWidth / chartData.length;
-
-    console.log('Rendering candlesticks:', {
-      dataLength: chartData.length,
-      chartWidth,
-      barWidth,
-      firstDate: chartData[0]?.date,
-      firstHigh: chartData[0]?.high,
-      scaleTest: xAxis.scale(chartData[0]?.date),
-      yScaleTest: yAxis.scale(chartData[0]?.high)
-    });
-
-    return (
-      <g>
-        {chartData.map((item: any, index: number) => {
-          // Get X position - xAxis.scale returns the center position for band scale
-          const xCenter = xAxis.scale(item.date);
-
-          // If xAxis.scale returns undefined, calculate position manually
-          const xPos = xCenter !== undefined
-            ? xCenter + (xAxis.bandwidth ? xAxis.bandwidth() / 2 : 0)
-            : (margin?.left || 0) + (index + 0.5) * barWidth;
-
-          // Calculate candle dimensions
-          const candleWidth = Math.max(barWidth * 0.7, 3);
-          const wickX = xPos;
-          const candleX = xPos - candleWidth / 2;
-
-          // Get Y positions from yAxis scale
-          const highY = yAxis.scale(item.high);
-          const lowY = yAxis.scale(item.low);
-          const openY = yAxis.scale(item.open);
-          const closeY = yAxis.scale(item.close);
-
-          // Skip if positions are invalid
-          if (
-            !isFinite(wickX) || !isFinite(highY) || !isFinite(lowY) ||
-            !isFinite(openY) || !isFinite(closeY)
-          ) {
-            return null;
-          }
-
-          const bodyTop = Math.min(openY, closeY);
-          const bodyBottom = Math.max(openY, closeY);
-          const bodyHeight = Math.max(Math.abs(closeY - openY), 1);
-
-          return (
-            <g key={`candlestick-${index}`}>
-              {/* Upper wick */}
-              <line
-                x1={wickX}
-                y1={highY}
-                x2={wickX}
-                y2={bodyTop}
-                stroke={item.color}
-                strokeWidth={1.5}
-              />
-              {/* Lower wick */}
-              <line
-                x1={wickX}
-                y1={bodyBottom}
-                x2={wickX}
-                y2={lowY}
-                stroke={item.color}
-                strokeWidth={1.5}
-              />
-              {/* Candle body */}
-              <rect
-                x={candleX}
-                y={bodyTop}
-                width={candleWidth}
-                height={bodyHeight}
-                fill={item.color}
-                stroke={item.color}
-                strokeWidth={1}
-              />
-            </g>
-          );
-        })}
-      </g>
-    );
-  };
-
   return (
     <ResponsiveContainer width="100%" height={height}>
       <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 60, bottom: 80 }}>
@@ -208,10 +108,8 @@ export function CandlestickChart({ data, height = 400, indicators = {} }: Candle
           stroke="#6b7280"
           tickFormatter={(value) => `$${value.toFixed(2)}`}
         />
-        <Tooltip
-          content={<CustomTooltip />}
-          cursor={{ stroke: '#9ca3af', strokeWidth: 1, strokeDasharray: '3 3' }}
-        />
+        <Tooltip content={<CustomTooltip />} />
+        <Brush dataKey="date" height={30} stroke="#2563eb" />
 
         {/* Fibonacci Retracement Levels */}
         {indicators.fibonacci && fibonacciLevels.map((fib) => (
@@ -230,10 +128,14 @@ export function CandlestickChart({ data, height = 400, indicators = {} }: Candle
           />
         ))}
 
-        {/* Candlesticks layer */}
-        <Customized component={CandlestickLayer} />
+        {/* Candlestick Body using Bar */}
+        <Bar dataKey="openClose" fill="#8884d8" barSize={8}>
+          {chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.bodyColor} />
+          ))}
+        </Bar>
 
-        {/* Bollinger Bands - Must be rendered as Area before Lines */}
+        {/* Bollinger Bands */}
         {indicators.bollinger && (
           <>
             <Area
@@ -346,15 +248,6 @@ export function CandlestickChart({ data, height = 400, indicators = {} }: Candle
             isAnimationActive={false}
           />
         )}
-
-        {/* Zoom Brush - Recharts handles filtering automatically */}
-        <Brush
-          dataKey="date"
-          height={30}
-          stroke="#3b82f6"
-          fill="#f3f4f6"
-          travellerWidth={10}
-        />
       </ComposedChart>
     </ResponsiveContainer>
   );

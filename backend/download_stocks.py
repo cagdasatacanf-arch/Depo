@@ -5,12 +5,21 @@ from datetime import datetime, timedelta
 # Initialize database
 init_db()
 
-# List of stocks to download (you can customize this)
-STOCKS = ["GOOGL", "MSFT", "AAPL", "TSLA", "AMZN"]
+# List of stocks to download (including Metals)
+STOCKS = [
+    # Tech Stocks
+    "GOOGL", "MSFT", "AAPL", "TSLA", "AMZN", 
+    # Metals (Spot Prices)
+    "XAU-USD", # Gold Spot
+    "XAG-USD", # Silver Spot
+    "XPT-USD", # Platinum Spot
+    "XPD-USD", # Palladium Spot
+    "HG=F"     # Copper (Futures - standard for Yahoo)
+]
 
-# Download 5 years of data
+# Download 15 years of data
 end_date = datetime.now()
-start_date = end_date - timedelta(days=365*5)
+start_date = end_date - timedelta(days=365*15)
 
 print(f"[DOWNLOAD] Downloading stock data from {start_date.date()} to {end_date.date()}")
 

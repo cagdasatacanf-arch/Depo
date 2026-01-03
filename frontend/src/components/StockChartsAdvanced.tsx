@@ -19,7 +19,7 @@ import {
 import { StockData } from '@/lib/api';
 import { addIndicatorsToData } from '@/lib/indicators';
 import { chartTemplates, applyTemplate } from '@/lib/chartTemplates';
-import { CandlestickChart } from './CandlestickChart';
+import { CandlestickChart } from './CandlestickChartSimple';
 
 interface StockChartsAdvancedProps {
   data: StockData[];
@@ -44,10 +44,11 @@ export function StockChartsAdvanced({ data, ticker }: StockChartsAdvancedProps) 
     obv: false,
     vwap: false,
     sar: false,
+    fibonacci: false,
   });
   const [zoomDomain, setZoomDomain] = useState<[number, number] | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
-  const [chartType, setChartType] = useState<'line' | 'candlestick'>('line');
+  const [chartType, setChartType] = useState<'line' | 'candlestick' | 'bar'>('line');
   const fullScreenRef = useRef<HTMLDivElement>(null);
 
   // Apply template when selected
@@ -242,7 +243,7 @@ export function StockChartsAdvanced({ data, ticker }: StockChartsAdvancedProps) 
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    Line Chart
+                    Line
                   </button>
                   <button
                     onClick={() => setChartType('candlestick')}
@@ -254,9 +255,19 @@ export function StockChartsAdvanced({ data, ticker }: StockChartsAdvancedProps) 
                   >
                     Candlestick
                   </button>
+                  <button
+                    onClick={() => setChartType('bar')}
+                    className={`flex-1 px-4 py-2 text-sm rounded-md transition-colors ${
+                      chartType === 'bar'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Bar
+                  </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  Switch between line chart and candlestick visualization
+                  Choose your preferred chart visualization style
                 </p>
               </div>
             </div>
@@ -357,6 +368,16 @@ export function StockChartsAdvanced({ data, ticker }: StockChartsAdvancedProps) 
                 >
                   Parabolic SAR
                 </button>
+                <button
+                  onClick={() => toggleIndicator('fibonacci')}
+                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                    indicators.fibonacci
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Fibonacci
+                </button>
               </div>
             </div>
 
@@ -441,7 +462,7 @@ export function StockChartsAdvanced({ data, ticker }: StockChartsAdvancedProps) 
         {/* Price Chart with Indicators */}
         {(!isFullScreen || activeChart === 'price') && (
           <div className="bg-white rounded-lg shadow p-6">
-            <ChartControls chartId="price" title={`Price with Indicators (${chartType === 'candlestick' ? 'Candlestick' : 'Line Chart'})`} />
+            <ChartControls chartId="price" title={`Price with Indicators (${chartType === 'candlestick' ? 'Candlestick' : chartType === 'bar' ? 'Bar Chart' : 'Line Chart'})`} />
             {chartType === 'candlestick' ? (
               <CandlestickChart
                 data={chartData}
@@ -454,8 +475,81 @@ export function StockChartsAdvanced({ data, ticker }: StockChartsAdvancedProps) 
                   bollinger: indicators.bollinger,
                   vwap: indicators.vwap,
                   sar: indicators.sar,
+                  fibonacci: indicators.fibonacci,
                 }}
               />
+            ) : chartType === 'bar' ? (
+              <ResponsiveContainer width="100%" height={chartHeight}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 12 }}
+                    stroke="#6b7280"
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    stroke="#6b7280"
+                    domain={['auto', 'auto']}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <Brush dataKey="date" height={30} stroke="#2563eb" />
+
+                  {/* Price Bars - showing Close price */}
+                  <Bar
+                    dataKey="close"
+                    name="Close Price"
+                    fill="#3b82f6"
+                    radius={[4, 4, 0, 0]}
+                  />
+
+                  {/* Moving Averages as Lines */}
+                  {indicators.sma20 && (
+                    <Line
+                      type="monotone"
+                      dataKey="sma20"
+                      name="SMA 20"
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={false}
+                    />
+                  )}
+                  {indicators.sma50 && (
+                    <Line
+                      type="monotone"
+                      dataKey="sma50"
+                      name="SMA 50"
+                      stroke="#ef4444"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={false}
+                    />
+                  )}
+                  {indicators.sma200 && (
+                    <Line
+                      type="monotone"
+                      dataKey="sma200"
+                      name="SMA 200"
+                      stroke="#dc2626"
+                      strokeWidth={2}
+                      strokeDasharray="10 5"
+                      dot={false}
+                    />
+                  )}
+                  {indicators.ema20 && (
+                    <Line
+                      type="monotone"
+                      dataKey="ema20"
+                      name="EMA 20"
+                      stroke="#a855f7"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  )}
+                </BarChart>
+              </ResponsiveContainer>
             ) : (
               <ResponsiveContainer width="100%" height={chartHeight}>
                 <ComposedChart data={chartData}>
