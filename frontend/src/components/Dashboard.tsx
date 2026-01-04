@@ -1,16 +1,28 @@
 import { useState } from 'react';
 import { useStocks, useStockData } from '@/hooks/useStocks';
 import { StockChartsAdvanced } from './StockChartsAdvanced';
+import { DataQualityBadge } from './DataQualityBadge';
+import { DataQualityPanel } from './DataQualityPanel';
 
 export function Dashboard() {
   const [selectedTicker, setSelectedTicker] = useState('GOOGL');
   const [viewMode, setViewMode] = useState<'charts' | 'table'>('charts');
   const [days, setDays] = useState(90);
-  const { tickers, loading: loadingTickers } = useStocks();
-  const { data: stockData, loading: loadingData } = useStockData(selectedTicker, days);
+  const [showQualityPanel, setShowQualityPanel] = useState(false);
+  const { tickers, loading: loadingTickers, error: tickersError } = useStocks();
+  const { data: stockData, loading: loadingData, error: dataError } = useStockData(selectedTicker, days);
 
   if (loadingTickers) {
     return <div className="p-4">Loading stocks...</div>;
+  }
+
+  if (tickersError) {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded">
+        <h3 className="text-red-800 font-semibold">Error loading stocks</h3>
+        <p className="text-red-600">{tickersError}</p>
+      </div>
+    );
   }
 
   return (
@@ -96,6 +108,16 @@ export function Dashboard() {
         </div>
       ) : stockData ? (
         <>
+          {/* Data Quality Badge */}
+          {stockData.data_quality && (
+            <div className="flex justify-center">
+              <DataQualityBadge
+                quality={stockData.data_quality}
+                onClick={() => setShowQualityPanel(true)}
+              />
+            </div>
+          )}
+
           {/* Charts View */}
           {viewMode === 'charts' && (
             <StockChartsAdvanced data={stockData.data} ticker={selectedTicker} />
@@ -178,6 +200,15 @@ export function Dashboard() {
           )}
         </>
       ) : null}
+
+      {/* Data Quality Panel Modal */}
+      {showQualityPanel && stockData?.data_quality && (
+        <DataQualityPanel
+          quality={stockData.data_quality}
+          ticker={selectedTicker}
+          onClose={() => setShowQualityPanel(false)}
+        />
+      )}
     </div>
   );
 }

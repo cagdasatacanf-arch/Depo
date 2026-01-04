@@ -9,11 +9,39 @@ export interface StockData {
   volume: number;
 }
 
+export interface DataQualityIssue {
+  severity: string;
+  category: string;
+  message: string;
+  details: Record<string, any>;
+  timestamp: string;
+}
+
+export interface DataQuality {
+  is_valid: boolean;
+  total_issues: number;
+  errors: number;
+  warnings: number;
+  info: number;
+  issues: DataQualityIssue[];
+}
+
+export interface StockMetadata {
+  total_records: number;
+  period: string;
+  interval: string;
+  fetched_at: string;
+  start_date: string;
+  end_date: string;
+}
+
 export interface StockResponse {
   status: string;
   ticker: string;
   data: StockData[];
   count: number;
+  data_quality?: DataQuality;
+  metadata?: StockMetadata;
 }
 
 export interface StocksListResponse {

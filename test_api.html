@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>DEPO API Test</h1>
+    <div id="result"></div>
+
+    <script>
+        const resultDiv = document.getElementById('result');
+
+        async function testAPI() {
+            try {
+                resultDiv.innerHTML = '<p>Testing API connection...</p>';
+
+                // Test 1: Health check
+                const healthRes = await fetch('http://localhost:3002/api/health');
+                const health = await healthRes.json();
+                resultDiv.innerHTML += '<p>✓ Health check: ' + JSON.stringify(health) + '</p>';
+
+                // Test 2: Get stocks
+                const stocksRes = await fetch('http://localhost:3002/api/stocks');
+                const stocks = await stocksRes.json();
+                resultDiv.innerHTML += '<p>✓ Stocks list: ' + JSON.stringify(stocks) + '</p>';
+
+                // Test 3: Get stock data
+                const dataRes = await fetch('http://localhost:3002/api/stocks/AAPL?days=30');
+                const data = await dataRes.json();
+                resultDiv.innerHTML += '<p>✓ Stock data: ticker=' + data.ticker + ', count=' + data.count + '</p>';
+                resultDiv.innerHTML += '<p>✓ Data quality: ' + JSON.stringify(data.data_quality) + '</p>';
+                resultDiv.innerHTML += '<p>✓ Metadata: ' + JSON.stringify(data.metadata) + '</p>';
+
+                resultDiv.innerHTML += '<h2 style="color: green;">All tests passed!</h2>';
+            } catch (error) {
+                resultDiv.innerHTML += '<p style="color: red;">✗ Error: ' + error.message + '</p>';
+            }
+        }
+
+        testAPI();
+    </script>
+</body>
+</html>

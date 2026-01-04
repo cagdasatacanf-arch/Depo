@@ -189,6 +189,7 @@ export function addIndicatorsToData(data: StockData[], indicators: {
   obv?: boolean;
   vwap?: boolean;
   sar?: boolean;
+  supertrend?: boolean;
 }) {
   const enrichedData = data.map((item, index) => ({ ...item })) as any[];
 
@@ -279,6 +280,14 @@ export function addIndicatorsToData(data: StockData[], indicators: {
   if (indicators.vwap) {
     const vwap = calculateVWAP(data);
     enrichedData.forEach((item, i) => item.vwap = vwap[i]);
+  }
+
+  if (indicators.supertrend) {
+    const st = calculateSupertrend(data);
+    enrichedData.forEach((item, i) => {
+      item.supertrend = st.supertrend[i];
+      item.supertrendBullish = st.trend[i];
+    });
   }
 
   return enrichedData;
@@ -546,4 +555,123 @@ export function calculateParabolicSAR(
   }
 
   return sar;
+}
+
+// Supertrend Indicator
+export interface SupertrendResult {
+  supertrend: number[];
+  trend: boolean[]; // true = bullish, false = bearish
+}
+
+export function calculateSupertrend(
+  data: StockData[],
+  period: number = 10,
+  multiplier: number = 3
+): SupertrendResult {
+  const atr = calculateATR(data, period);
+  const supertrend: number[] = [];
+  const trend: boolean[] = [];
+
+  let upperBand: number[] = [];
+  let lowerBand: number[] = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const hl2 = (data[i].high + data[i].low) / 2;
+
+    if (isNaN(atr[i])) {
+      supertrend.push(NaN);
+      trend.push(true);
+      upperBand.push(NaN);
+      lowerBand.push(NaN);
+      continue;
+    }
+
+    // Calculate basic upper and lower bands
+    const basicUpperBand = hl2 + (multiplier * atr[i]);
+    const basicLowerBand = hl2 - (multiplier * atr[i]);
+
+    // Calculate final bands considering previous values
+    let finalUpperBand = basicUpperBand;
+    let finalLowerBand = basicLowerBand;
+
+    if (i > 0 && !isNaN(upperBand[i - 1])) {
+      finalUpperBand = basicUpperBand < upperBand[i - 1] || data[i - 1].close > upperBand[i - 1]
+        ? basicUpperBand
+        : upperBand[i - 1];
+
+      finalLowerBand = basicLowerBand > lowerBand[i - 1] || data[i - 1].close < lowerBand[i - 1]
+        ? basicLowerBand
+        : lowerBand[i - 1];
+    }
+
+    upperBand.push(finalUpperBand);
+    lowerBand.push(finalLowerBand);
+
+    // Determine trend and Supertrend value
+    let currentTrend = true; // bullish by default
+    let stValue = finalLowerBand;
+
+    if (i > 0) {
+      if (trend[i - 1]) {
+        // Was bullish
+        if (data[i].close <= finalLowerBand) {
+          currentTrend = false;
+          stValue = finalUpperBand;
+        } else {
+          currentTrend = true;
+          stValue = finalLowerBand;
+        }
+      } else {
+        // Was bearish
+        if (data[i].close >= finalUpperBand) {
+          currentTrend = true;
+          stValue = finalLowerBand;
+        } else {
+          currentTrend = false;
+          stValue = finalUpperBand;
+        }
+      }
+    }
+
+    supertrend.push(stValue);
+    trend.push(currentTrend);
+  }
+
+  return { supertrend, trend };
+}
+
+// Heikin Ashi Transformation
+export function transformToHeikinAshi(data: StockData[]): StockData[] {
+  const heikinAshi: StockData[] = [];
+
+  for (let i = 0; i < data.length; i++) {
+    if (i === 0) {
+      // First candle is the same
+      heikinAshi.push({ ...data[i] });
+    } else {
+      const prevHA = heikinAshi[i - 1];
+
+      // HA Close = (Open + High + Low + Close) / 4
+      const haClose = (data[i].open + data[i].high + data[i].low + data[i].close) / 4;
+
+      // HA Open = (Previous HA Open + Previous HA Close) / 2
+      const haOpen = (prevHA.open + prevHA.close) / 2;
+
+      // HA High = Max(High, HA Open, HA Close)
+      const haHigh = Math.max(data[i].high, haOpen, haClose);
+
+      // HA Low = Min(Low, HA Open, HA Close)
+      const haLow = Math.min(data[i].low, haOpen, haClose);
+
+      heikinAshi.push({
+        ...data[i],
+        open: haOpen,
+        high: haHigh,
+        low: haLow,
+        close: haClose,
+      });
+    }
+  }
+
+  return heikinAshi;
 }
