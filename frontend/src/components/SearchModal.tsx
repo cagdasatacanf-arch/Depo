@@ -9,7 +9,9 @@ import {
   CommandSeparator,
 } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, TrendingUp, Bitcoin, DollarSign, Package } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, TrendingUp, Bitcoin, DollarSign, Package, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Asset {
   id: number;
@@ -127,6 +129,30 @@ export function SearchModal({ open, onOpenChange, onSelectAsset }: SearchModalPr
     onOpenChange(false);
   }, [onSelectAsset, onOpenChange]);
 
+  const handleAddToWatchlist = useCallback(async (asset: Asset, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering onSelect
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/watchlist/add?asset_id=${asset.id}`,
+        { method: 'POST' }
+      );
+
+      const data = await response.json();
+
+      if (data.status === 'ok') {
+        toast.success(`${asset.symbol} added to watchlist`);
+      } else if (data.status === 'info') {
+        toast.info(`${asset.symbol} is already in your watchlist`);
+      } else {
+        toast.error('Failed to add to watchlist');
+      }
+    } catch (error) {
+      console.error('Add to watchlist error:', error);
+      toast.error('Failed to add to watchlist');
+    }
+  }, []);
+
   const formatMarketCap = (marketCap?: number) => {
     if (!marketCap) return '';
 
@@ -224,7 +250,7 @@ export function SearchModal({ open, onOpenChange, onSelectAsset }: SearchModalPr
                         key={asset.id}
                         value={`${asset.symbol}-${asset.name}`}
                         onSelect={() => handleSelect(asset)}
-                        className="flex items-center justify-between cursor-pointer"
+                        className="flex items-center justify-between cursor-pointer group"
                       >
                         <div className="flex items-center gap-3 flex-1">
                           <div className={`w-2 h-2 rounded-full ${color}`} />
@@ -242,11 +268,21 @@ export function SearchModal({ open, onOpenChange, onSelectAsset }: SearchModalPr
                             )}
                           </div>
                         </div>
-                        {asset.market_cap && (
-                          <div className="text-sm text-muted-foreground ml-2">
-                            {formatMarketCap(asset.market_cap)}
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {asset.market_cap && (
+                            <div className="text-sm text-muted-foreground">
+                              {formatMarketCap(asset.market_cap)}
+                            </div>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => handleAddToWatchlist(asset, e)}
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </CommandItem>
                     ))}
                   </CommandGroup>

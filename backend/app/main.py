@@ -9,7 +9,10 @@ from app.database import init_db, get_all_stocks, get_stock_data
 # Import PostgreSQL functions when DATABASE_URL is set
 import os
 if os.getenv("DATABASE_URL"):
-    from app.database_pg import search_assets, get_asset_by_symbol, get_assets_by_category
+    from app.database_pg import (
+        search_assets, get_asset_by_symbol, get_assets_by_category,
+        get_watchlist, add_to_watchlist, remove_from_watchlist
+    )
 from app.services.data_quality import validate_data
 from app.services.broadcaster import broadcaster
 from app.services.market_updater import market_updater
@@ -248,6 +251,126 @@ async def get_asset_endpoint(symbol: str):
         }
     except Exception as e:
         logger.error(f"Get asset error: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+# Get user watchlist (requires PostgreSQL)
+@app.get("/api/watchlist")
+async def get_watchlist_endpoint(watchlist_id: int = 1):
+    """
+    Get assets in a watchlist with current prices
+
+    Query params:
+        watchlist_id: Watchlist ID (default 1)
+
+    Example: GET /api/watchlist
+    """
+    if not os.getenv("DATABASE_URL"):
+        return {
+            "status": "error",
+            "message": "Watchlist requires PostgreSQL. Set DATABASE_URL environment variable.",
+            "assets": []
+        }
+
+    try:
+        assets = get_watchlist(watchlist_id)
+
+        return {
+            "status": "ok",
+            "watchlist_id": watchlist_id,
+            "assets": [dict(asset) for asset in assets],
+            "count": len(assets)
+        }
+    except Exception as e:
+        logger.error(f"Get watchlist error: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "assets": []
+        }
+
+# Add asset to watchlist (requires PostgreSQL)
+@app.post("/api/watchlist/add")
+async def add_to_watchlist_endpoint(asset_id: int, watchlist_id: int = 1, notes: str = None):
+    """
+    Add an asset to a watchlist
+
+    Body params:
+        asset_id: Asset ID to add
+        watchlist_id: Watchlist ID (default 1)
+        notes: Optional notes
+
+    Example: POST /api/watchlist/add?asset_id=1&notes=Buy%20signal
+    """
+    if not os.getenv("DATABASE_URL"):
+        return {
+            "status": "error",
+            "message": "Watchlist requires PostgreSQL. Set DATABASE_URL environment variable."
+        }
+
+    try:
+        success = add_to_watchlist(asset_id, watchlist_id, notes)
+
+        if success:
+            return {
+                "status": "ok",
+                "message": "Asset added to watchlist",
+                "asset_id": asset_id,
+                "watchlist_id": watchlist_id
+            }
+        else:
+            return {
+                "status": "info",
+                "message": "Asset already in watchlist",
+                "asset_id": asset_id,
+                "watchlist_id": watchlist_id
+            }
+    except Exception as e:
+        logger.error(f"Add to watchlist error: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+# Remove asset from watchlist (requires PostgreSQL)
+@app.delete("/api/watchlist/remove")
+async def remove_from_watchlist_endpoint(asset_id: int, watchlist_id: int = 1):
+    """
+    Remove an asset from a watchlist
+
+    Query params:
+        asset_id: Asset ID to remove
+        watchlist_id: Watchlist ID (default 1)
+
+    Example: DELETE /api/watchlist/remove?asset_id=1
+    """
+    if not os.getenv("DATABASE_URL"):
+        return {
+            "status": "error",
+            "message": "Watchlist requires PostgreSQL. Set DATABASE_URL environment variable."
+        }
+
+    try:
+        success = remove_from_watchlist(asset_id, watchlist_id)
+
+        if success:
+            return {
+                "status": "ok",
+                "message": "Asset removed from watchlist",
+                "asset_id": asset_id,
+                "watchlist_id": watchlist_id
+            }
+        else:
+            return {
+                "status": "info",
+                "message": "Asset not found in watchlist",
+                "asset_id": asset_id,
+                "watchlist_id": watchlist_id
+            }
+    except Exception as e:
+        logger.error(f"Remove from watchlist error: {e}")
         return {
             "status": "error",
             "message": str(e)
