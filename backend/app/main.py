@@ -1,13 +1,39 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
+from contextlib import asynccontextmanager
+import logging
+import asyncio
+import json
 from app.database import init_db, get_all_stocks, get_stock_data
 from app.services.data_quality import validate_data
+from app.services.broadcaster import broadcaster
+from app.services.market_updater import market_updater
 
-app = FastAPI()
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Initialize database on startup
-init_db()
+# Lifespan context manager for startup/shutdown events
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle startup and shutdown events"""
+    # Startup
+    logger.info("Starting up DEPO backend...")
+    init_db()
+
+    # Start market updater in background
+    tickers = get_all_stocks()
+    market_updater.set_tickers(tickers)
+    asyncio.create_task(market_updater.start())
+
+    yield
+
+    # Shutdown
+    logger.info("Shutting down DEPO backend...")
+    await market_updater.stop()
+
+app = FastAPI(lifespan=lifespan)
 
 # Enable CORS
 app.add_middleware(
@@ -93,4 +119,115 @@ async def get_latest_price(ticker: str):
     return {
         "status": "error",
         "message": "No data found for ticker"
+    }
+
+# WebSocket endpoint for real-time price updates
+@app.websocket("/ws/stocks/{ticker}")
+async def websocket_endpoint(websocket: WebSocket, ticker: str):
+    """
+    WebSocket endpoint for real-time stock price updates
+
+    Args:
+        websocket: WebSocket connection
+        ticker: Stock ticker symbol to subscribe to
+    """
+    ticker = ticker.upper()
+    await websocket.accept()
+    logger.info(f"WebSocket client connected for {ticker}")
+
+    # Subscribe to Redis channel for this ticker
+    channel = f"market:{ticker}"
+    pubsub = None
+
+    try:
+        # Connect to Redis and subscribe
+        await broadcaster.connect()
+        pubsub = await broadcaster.subscribe(channel)
+
+        # Send initial connection confirmation
+        await websocket.send_json({
+            "type": "connection",
+            "status": "connected",
+            "ticker": ticker,
+            "channel": channel,
+            "timestamp": datetime.now().isoformat()
+        })
+
+        # Listen for messages from Redis and forward to WebSocket client
+        # We'll run this in a separate task
+        async def listen_redis():
+            """Listen to Redis pub/sub and forward messages"""
+            try:
+                # Note: redis-py's listen() is blocking, so we need to handle this carefully
+                # For now, we'll poll the pubsub for messages
+                while True:
+                    message = pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                    if message and message['type'] == 'message':
+                        try:
+                            data = json.loads(message['data'])
+                            await websocket.send_json(data)
+                            logger.debug(f"Sent update to client: {data}")
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Failed to decode Redis message: {e}")
+                    await asyncio.sleep(0.1)  # Small delay to prevent busy-waiting
+            except Exception as e:
+                logger.error(f"Error in Redis listener: {e}")
+
+        # Start Redis listener task
+        redis_task = asyncio.create_task(listen_redis())
+
+        # Keep connection open and handle heartbeat
+        while True:
+            try:
+                # Wait for messages from client (for heartbeat/ping)
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                message = json.loads(data)
+
+                # Handle heartbeat/ping
+                if message.get("type") == "ping":
+                    await websocket.send_json({
+                        "type": "pong",
+                        "timestamp": datetime.now().isoformat()
+                    })
+            except asyncio.TimeoutError:
+                # Send heartbeat from server side if no client message
+                await websocket.send_json({
+                    "type": "heartbeat",
+                    "timestamp": datetime.now().isoformat()
+                })
+            except WebSocketDisconnect:
+                logger.info(f"Client disconnected from {ticker}")
+                break
+            except json.JSONDecodeError:
+                logger.warning("Received invalid JSON from client")
+            except Exception as e:
+                logger.error(f"WebSocket error: {e}")
+                break
+
+    except Exception as e:
+        logger.error(f"WebSocket error for {ticker}: {e}")
+    finally:
+        # Cleanup
+        if pubsub:
+            await broadcaster.unsubscribe(channel)
+        if 'redis_task' in locals():
+            redis_task.cancel()
+        logger.info(f"WebSocket connection closed for {ticker}")
+
+
+# WebSocket health check endpoint
+@app.get("/api/ws/health")
+async def websocket_health():
+    """Check if WebSocket and Redis are available"""
+    try:
+        await broadcaster.connect()
+        redis_status = "connected"
+    except Exception as e:
+        redis_status = f"error: {str(e)}"
+
+    return {
+        "status": "ok",
+        "websocket": "available",
+        "redis": redis_status,
+        "market_updater": "running" if market_updater.is_running else "stopped"
     }
