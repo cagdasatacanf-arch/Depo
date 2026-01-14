@@ -2,6 +2,12 @@ import { Moon, Sun, Menu, Briefcase, RefreshCw, TrendingUp, Database } from 'luc
 import { Button } from '@/components/ui/button';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;
@@ -11,25 +17,66 @@ interface DashboardHeaderProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   lastUpdated?: Date | null;
+  wsConnected?: boolean;
+  wsConnecting?: boolean;
+  wsReconnectCount?: number;
+  wsLatency?: number;
+  realtimeMode?: boolean;
 }
 
-export const DashboardHeader = ({ 
-  onMenuClick, 
+export const DashboardHeader = ({
+  onMenuClick,
   onPortfolioClick,
   onMarketInsightsClick,
   onDataImportClick,
   onRefresh,
   isRefreshing,
   lastUpdated,
+  wsConnected = false,
+  wsConnecting = false,
+  wsReconnectCount = 0,
+  wsLatency = 0,
+  realtimeMode = false,
 }: DashboardHeaderProps) => {
   const { theme, setTheme } = useTheme();
 
   const formatLastUpdated = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
       minute: '2-digit',
     });
   };
+
+  const getConnectionStatus = () => {
+    if (!realtimeMode) {
+      return {
+        color: 'bg-gray-400',
+        label: 'Polling Mode',
+        details: 'Real-time updates disabled'
+      };
+    }
+    if (wsConnecting) {
+      return {
+        color: 'bg-yellow-500 animate-pulse',
+        label: 'Connecting',
+        details: `Reconnecting... (attempt ${wsReconnectCount + 1}/3)`
+      };
+    }
+    if (wsConnected) {
+      return {
+        color: 'bg-success',
+        label: 'Connected',
+        details: `WebSocket connected • Latency: ${wsLatency}ms`
+      };
+    }
+    return {
+      color: 'bg-destructive',
+      label: 'Disconnected',
+      details: wsReconnectCount >= 3 ? 'Max reconnect attempts reached' : 'Connection lost'
+    };
+  };
+
+  const connectionStatus = getConnectionStatus();
 
   return (
     <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 lg:px-6">
@@ -46,6 +93,27 @@ export const DashboardHeader = ({
         <span className="hidden sm:inline text-xs text-muted-foreground">
           Financial Intelligence
         </span>
+
+        {/* Connection Status Indicator */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-2 cursor-help">
+                <div className={cn(
+                  "w-2 h-2 rounded-full",
+                  connectionStatus.color
+                )} />
+                <span className="hidden md:inline text-xs text-muted-foreground">
+                  {connectionStatus.label}
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="font-medium">{connectionStatus.label}</p>
+              <p className="text-xs text-muted-foreground">{connectionStatus.details}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       <div className="flex items-center gap-2">
