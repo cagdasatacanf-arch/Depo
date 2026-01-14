@@ -37,8 +37,23 @@ const Dashboard = () => {
   const [historicalSidebarOpen, setHistoricalSidebarOpen] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // Real-time market data
-  const { symbols: marketSymbols, isLoading: marketLoading, lastUpdated, refresh: refreshMarket } = useMarketData();
+  // Real-time market data with WebSocket support
+  const {
+    symbols: marketSymbols,
+    isLoading: marketLoading,
+    lastUpdated,
+    refresh: refreshMarket,
+    realtimeMode,
+    toggleRealtime,
+    wsConnected,
+    wsConnecting,
+    wsReconnectCount,
+    wsLatency,
+    wsError,
+  } = useMarketData({
+    enableRealTime: false, // Start in polling mode
+    ticker: selectedSymbol,
+  });
   
   // AI State
   const [aiPanelOpen, setAIPanelOpen] = useState(false);
@@ -169,14 +184,19 @@ const Dashboard = () => {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <div className="h-screen flex flex-col bg-background">
-        <DashboardHeader 
-          onMenuClick={() => setSidebarOpen(true)} 
+        <DashboardHeader
+          onMenuClick={() => setSidebarOpen(true)}
           onPortfolioClick={() => setPortfolioPanelOpen(true)}
           onMarketInsightsClick={() => setMarketInsightsOpen(true)}
           onDataImportClick={() => setDataImportOpen(true)}
           onRefresh={refreshMarket}
           isRefreshing={marketLoading}
           lastUpdated={lastUpdated}
+          wsConnected={wsConnected}
+          wsConnecting={wsConnecting}
+          wsReconnectCount={wsReconnectCount}
+          wsLatency={wsLatency}
+          realtimeMode={realtimeMode}
         />
         
         <div className="flex-1 flex overflow-hidden">
@@ -217,6 +237,10 @@ const Dashboard = () => {
               onExportCSV={handleExportCSV}
               alertsCount={alerts.length}
               onOpenAlerts={() => setAlertsPanelOpen(true)}
+              realtimeMode={realtimeMode}
+              onToggleRealtime={toggleRealtime}
+              wsConnected={wsConnected}
+              wsConnecting={wsConnecting}
               alertButton={
                 <PriceAlertDialog
                   symbolId={currentSymbol.id}
