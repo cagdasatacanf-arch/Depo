@@ -1,18 +1,22 @@
 import { useState } from 'react';
-import { Search, TrendingUp, TrendingDown, Bot, ChevronRight, Star } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, Bot, ChevronRight, Star, ChevronDown, Bitcoin, DollarSign, Package, TrendingUpIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { useWatchlist } from '@/hooks/useWatchlist';
+
+type AssetCategory = 'stock' | 'crypto' | 'forex' | 'commodity' | 'etf' | 'index' | 'metal';
 
 interface Symbol {
   id: string;
   name: string;
   price: number;
   change: number;
-  category: 'stock' | 'metal';
+  category: AssetCategory;
 }
 
 interface SymbolSidebarProps {
@@ -23,6 +27,16 @@ interface SymbolSidebarProps {
   isAILoading?: boolean;
   className?: string;
 }
+
+const categoryConfig: Record<AssetCategory, { label: string; icon: typeof TrendingUpIcon; color: string }> = {
+  stock: { label: 'Stocks', icon: TrendingUpIcon, color: 'text-blue-500' },
+  crypto: { label: 'Cryptocurrencies', icon: Bitcoin, color: 'text-orange-500' },
+  forex: { label: 'Forex Pairs', icon: DollarSign, color: 'text-green-500' },
+  commodity: { label: 'Commodities', icon: Package, color: 'text-yellow-600' },
+  metal: { label: 'Metals', icon: Package, color: 'text-gray-500' },
+  etf: { label: 'ETFs', icon: TrendingUpIcon, color: 'text-purple-500' },
+  index: { label: 'Indices', icon: TrendingUpIcon, color: 'text-indigo-500' },
+};
 
 const presetQueries = [
   { label: '📰 News', query: 'Latest news and market updates' },
@@ -41,6 +55,7 @@ export const SymbolSidebar = ({
 }: SymbolSidebarProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [aiQuery, setAIQuery] = useState('');
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<AssetCategory>>(new Set());
   const { watchlist, toggleWatchlist, isInWatchlist } = useWatchlist();
 
   const filteredSymbols = symbols.filter(s =>
@@ -49,6 +64,28 @@ export const SymbolSidebar = ({
   );
 
   const watchlistSymbols = symbols.filter(s => watchlist.includes(s.id));
+
+  // Group symbols by category
+  const symbolsByCategory = filteredSymbols.reduce((acc, symbol) => {
+    const category = symbol.category || 'stock';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(symbol);
+    return acc;
+  }, {} as Record<AssetCategory, Symbol[]>);
+
+  const toggleCategory = (category: AssetCategory) => {
+    setCollapsedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
 
   const handleAISearch = () => {
     if (aiQuery.trim()) {
@@ -111,6 +148,39 @@ export const SymbolSidebar = ({
     </div>
   );
 
+  const CategorySection = ({ category, symbols: categorySymbols }: { category: AssetCategory; symbols: Symbol[] }) => {
+    const config = categoryConfig[category];
+    const Icon = config.icon;
+    const isCollapsed = collapsedCategories.has(category);
+
+    return (
+      <Collapsible open={!isCollapsed} onOpenChange={() => toggleCategory(category)}>
+        <CollapsibleTrigger className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-sidebar-accent rounded-md group">
+          <div className="flex items-center gap-2">
+            <ChevronDown className={cn(
+              "h-3.5 w-3.5 transition-transform text-muted-foreground",
+              isCollapsed && "-rotate-90"
+            )} />
+            <Icon className={cn("h-4 w-4", config.color)} />
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              {config.label}
+            </span>
+          </div>
+          <Badge variant="secondary" className="text-xs">
+            {categorySymbols.length}
+          </Badge>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="space-y-0.5 mt-1">
+            {categorySymbols.map((symbol) => (
+              <SymbolItem key={symbol.id} symbol={symbol} />
+            ))}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  };
+
   return (
     <aside className={cn("w-72 border-r border-border bg-sidebar flex flex-col", className)}>
       {/* Symbol Search */}
@@ -140,15 +210,22 @@ export const SymbolSidebar = ({
 
         <TabsContent value="all" className="flex-1 mt-0">
           <ScrollArea className="h-full custom-scrollbar">
-            <div className="p-2">
-              <h3 className="px-2 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Symbols
-              </h3>
-              <div className="space-y-0.5">
-                {filteredSymbols.map((symbol) => (
-                  <SymbolItem key={symbol.id} symbol={symbol} />
-                ))}
-              </div>
+            <div className="p-2 space-y-2">
+              {Object.keys(symbolsByCategory).length === 0 ? (
+                <div className="px-3 py-8 text-center text-muted-foreground text-sm">
+                  <Search className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  <p>No symbols found</p>
+                  <p className="text-xs mt-1">Try a different search query</p>
+                </div>
+              ) : (
+                Object.entries(symbolsByCategory).map(([category, categorySymbols]) => (
+                  <CategorySection
+                    key={category}
+                    category={category as AssetCategory}
+                    symbols={categorySymbols}
+                  />
+                ))
+              )}
             </div>
           </ScrollArea>
         </TabsContent>

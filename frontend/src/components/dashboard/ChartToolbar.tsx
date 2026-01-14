@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, Download, Image, Bell } from 'lucide-react';
+import { TrendingUp, TrendingDown, Download, Image, Bell, Activity, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -8,6 +8,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ChartToolbarProps {
   symbol: {
@@ -27,6 +33,10 @@ interface ChartToolbarProps {
   alertsCount?: number;
   onOpenAlerts?: () => void;
   alertButton?: React.ReactNode;
+  realtimeMode?: boolean;
+  onToggleRealtime?: () => void;
+  wsConnected?: boolean;
+  wsConnecting?: boolean;
 }
 
 const periods = ['1D', '1W', '1M', '3M', '6M', '1Y', '5Y', 'MAX'];
@@ -53,6 +63,10 @@ export const ChartToolbar = ({
   alertsCount = 0,
   onOpenAlerts,
   alertButton,
+  realtimeMode = false,
+  onToggleRealtime,
+  wsConnected = false,
+  wsConnecting = false,
 }: ChartToolbarProps) => {
   return (
     <div className="border-b border-border bg-card p-4 space-y-4">
@@ -69,8 +83,8 @@ export const ChartToolbar = ({
             </span>
             <div className={cn(
               "flex items-center gap-1 px-2 py-1 rounded-md text-sm font-medium",
-              symbol.change >= 0 
-                ? "bg-success/10 text-success" 
+              symbol.change >= 0
+                ? "bg-success/10 text-success"
                 : "bg-destructive/10 text-destructive"
             )}>
               {symbol.change >= 0 ? (
@@ -85,10 +99,49 @@ export const ChartToolbar = ({
 
         {/* Alert & Export Buttons */}
         <div className="flex items-center gap-2">
+          {/* Real-time Toggle */}
+          {onToggleRealtime && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={realtimeMode ? "default" : "outline"}
+                    size="sm"
+                    onClick={onToggleRealtime}
+                    className={cn(
+                      "relative",
+                      realtimeMode && wsConnected && "bg-success hover:bg-success/90",
+                      realtimeMode && wsConnecting && "bg-yellow-500 hover:bg-yellow-600"
+                    )}
+                  >
+                    {wsConnecting ? (
+                      <Activity className="h-4 w-4 mr-1 animate-pulse" />
+                    ) : realtimeMode && wsConnected ? (
+                      <Wifi className="h-4 w-4 mr-1" />
+                    ) : (
+                      <WifiOff className="h-4 w-4 mr-1" />
+                    )}
+                    {realtimeMode ? 'Real-time' : 'Polling'}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {wsConnecting
+                      ? 'Connecting to WebSocket...'
+                      : realtimeMode && wsConnected
+                      ? 'Connected - receiving live updates'
+                      : realtimeMode
+                      ? 'Disconnected - attempting to reconnect'
+                      : 'Click to enable real-time updates'}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           {alertButton}
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onOpenAlerts}
             className="relative"
           >
