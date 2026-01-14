@@ -6,6 +6,10 @@ import logging
 import asyncio
 import json
 from app.database import init_db, get_all_stocks, get_stock_data
+# Import PostgreSQL functions when DATABASE_URL is set
+import os
+if os.getenv("DATABASE_URL"):
+    from app.database_pg import search_assets, get_asset_by_symbol, get_assets_by_category
 from app.services.data_quality import validate_data
 from app.services.broadcaster import broadcaster
 from app.services.market_updater import market_updater
@@ -120,6 +124,134 @@ async def get_latest_price(ticker: str):
         "status": "error",
         "message": "No data found for ticker"
     }
+
+# Asset search endpoint (requires PostgreSQL)
+@app.get("/api/assets/search")
+async def search_assets_endpoint(q: str, category: str = None, limit: int = 50):
+    """
+    Search for assets by symbol or name with fuzzy matching
+
+    Query params:
+        q: Search query (symbol or name)
+        category: Optional filter (stock, crypto, forex, commodity, etf, index)
+        limit: Max results (default 50)
+
+    Example: GET /api/assets/search?q=apple&category=stock
+    """
+    if not os.getenv("DATABASE_URL"):
+        return {
+            "status": "error",
+            "message": "Asset search requires PostgreSQL. Set DATABASE_URL environment variable.",
+            "results": []
+        }
+
+    if not q or len(q) < 1:
+        return {
+            "status": "error",
+            "message": "Query parameter 'q' is required",
+            "results": []
+        }
+
+    try:
+        start_time = datetime.now()
+        results = search_assets(q, category, min(limit, 100))
+        duration_ms = (datetime.now() - start_time).total_seconds() * 1000
+
+        return {
+            "status": "ok",
+            "query": q,
+            "category": category,
+            "results": results,
+            "count": len(results),
+            "duration_ms": round(duration_ms, 2),
+            "metadata": {
+                "search_type": "fuzzy",
+                "max_results": limit,
+                "response_time_ms": round(duration_ms, 2)
+            }
+        }
+    except Exception as e:
+        logger.error(f"Asset search error: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "results": []
+        }
+
+# Get assets by category (requires PostgreSQL)
+@app.get("/api/assets/category/{category}")
+async def get_assets_by_category_endpoint(category: str, limit: int = 100):
+    """
+    Get all assets in a specific category
+
+    Path params:
+        category: Asset category (stock, crypto, forex, commodity, etf, index)
+
+    Query params:
+        limit: Max results (default 100)
+
+    Example: GET /api/assets/category/crypto?limit=20
+    """
+    if not os.getenv("DATABASE_URL"):
+        return {
+            "status": "error",
+            "message": "Asset categories require PostgreSQL. Set DATABASE_URL environment variable.",
+            "assets": []
+        }
+
+    try:
+        assets = get_assets_by_category(category.lower(), limit)
+
+        return {
+            "status": "ok",
+            "category": category.lower(),
+            "assets": assets,
+            "count": len(assets)
+        }
+    except Exception as e:
+        logger.error(f"Get assets by category error: {e}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "assets": []
+        }
+
+# Get asset details by symbol (requires PostgreSQL)
+@app.get("/api/assets/{symbol}")
+async def get_asset_endpoint(symbol: str):
+    """
+    Get detailed information about a specific asset
+
+    Path params:
+        symbol: Asset symbol (e.g., AAPL, BTC-USD, EURUSD=X)
+
+    Example: GET /api/assets/AAPL
+    """
+    if not os.getenv("DATABASE_URL"):
+        return {
+            "status": "error",
+            "message": "Asset details require PostgreSQL. Set DATABASE_URL environment variable."
+        }
+
+    try:
+        asset = get_asset_by_symbol(symbol)
+
+        if not asset:
+            return {
+                "status": "error",
+                "message": f"Asset not found: {symbol.upper()}"
+            }
+
+        return {
+            "status": "ok",
+            "asset": dict(asset)
+        }
+    except Exception as e:
+        logger.error(f"Get asset error: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
 
 # WebSocket endpoint for real-time price updates
 @app.websocket("/ws/stocks/{ticker}")
